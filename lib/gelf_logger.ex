@@ -47,7 +47,6 @@ defmodule Logger.Backends.Gelf do
   - [x] Tests
   - [ ] TCP Support
   - [x] Options for compression (none, zlib)
-  - [x] Send timestamp instead of relying on the Graylog server to set it
   - [x] Find a better way of pulling the hostname
 
   And probably many more. This is only out here because it might be useful to
@@ -64,7 +63,6 @@ defmodule Logger.Backends.Gelf do
   @max_size 1047040
   @max_packet_size 8192
   @max_payload_size 8180
-  @epoch :calendar.datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}})
 
   def init({__MODULE__, name}) do
     if user = Process.whereis(:user) do
@@ -128,19 +126,12 @@ defmodule Logger.Backends.Gelf do
       |> Keyword.merge(state[:tags])
       |> Map.new(fn({k,v}) -> {"_#{k}", to_string(v)} end)
 
-    {{year, month, day}, {hour, min, sec, milli}} = ts
-
-    epoch_seconds = :calendar.datetime_to_gregorian_seconds({{year, month, day}, {hour, min, sec}}) - @epoch
-
-    {timestamp, _remainder} = "#{epoch_seconds}.#{milli}" |> Float.parse
-
     gelf = %{
       short_message:  String.slice(to_string(msg), 0..79),
       long_message:   to_string(msg),
       version:        "1.1",
       host:           state[:host],
       level:          int_level,
-      timestamp:      Float.round(timestamp, 3),
       _application:   state[:application]
     } |> Map.merge(fields)
 
